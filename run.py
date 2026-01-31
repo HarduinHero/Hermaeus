@@ -1,49 +1,47 @@
-import asyncio
-import json
 from argparse import Namespace
-from pathlib import Path
+from action_loop import action_loop, create_action_file
+from enums import Actions
 
-import requests
-from websockets.asyncio.client import connect
+import discord
+from discord import app_commands
 
-from const import (GET_GATEWAY_CACHE_FILE, HEADERS, HEADERS_AUTH,
-                   URL_GET_GATEWAY, WORKING_DIRECTORY)
-from utils import response_content_cleaner
-
+from const import BOT_TOKEN
 
 
-def get_gateway(refresh:bool=False) -> str :
-    cache_file = Path(GET_GATEWAY_CACHE_FILE)
-    if not(refresh) and cache_file.exists() and cache_file.is_file() :
-        with cache_file.open() as cache_file_fd :
-            return cache_file_fd.read()
-    else :
-        try :
-            response = requests.get(
-                url=URL_GET_GATEWAY,
-                headers=HEADERS
-            )
-        except ConnectionError :
-            raise ConnectionError("Something went wrong while fetching geteway endpoint.")
-        else :
-            gateway_url = json.loads(response_content_cleaner(response.content))["url"]
-            with cache_file.open("w") as cache_file_fd :
-                cache_file_fd.write(gateway_url)
-            return gateway_url
 
-async def hello() :
-    async with connect(get_gateway()) as websocket:
-        message = await websocket.recv()
-        print(message)
+class CustomClient(discord.Client) :
+
+    user: discord.ClientUser
+
+    def __init__(self) -> None:
+        intents = discord.Intents.default()
+        intents.message_content = True
+        super().__init__(intents=intents)
+        self.tree = app_commands.CommandTree(self)
     
-
+    async def setup_hook(self):
+        await self.tree.sync()
 
 def main(args:Namespace) -> None :
-    Path(WORKING_DIRECTORY).mkdir(parents=True, exist_ok=True)
+    
+    client = CustomClient()
 
-    asyncio.run(hello())
+    @client.tree.command(
+            name=Actions.ARCHIVE.value,
+            description="Make Hermaeus collect and archive the designated " \
+                        "content of the current channel.",
+    )
+    @app_commands.allowed_installs(guilds=False, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
+    async def slash_archive(
+        interaction: discord.Interaction,
+    ) :
+        await interaction.response.send_message("Starting archiving process")
+        print(type(interaction.channel))
 
+    client.run(BOT_TOKEN)
 
+    action_loop()
 
 
 
