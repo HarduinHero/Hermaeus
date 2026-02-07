@@ -1,11 +1,12 @@
 import yaml
+from pathlib import Path
 
 __CONFIG_FILENAME = "config.yml"
 
 with open(__CONFIG_FILENAME, "r") as config_file :
     CONFIG:dict = yaml.safe_load(config_file)
 
-WORKING_DIRECTORY   = CONFIG["working_directory"]
+WORKING_DIR = Path(CONFIG["working_directory"])
 DISCORD_API_VERSION = CONFIG["discord"]["api_version"]
 BOT_NAME            = CONFIG["discord"]["application"]["name"]
 APPLICATION_ID      = CONFIG["discord"]["application"]["id"]
